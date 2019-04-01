@@ -57,18 +57,17 @@ public class MainActivity extends AppCompatActivity {
                 mp.start();
             }
         });
-        DoorView.start();
         AllFragment = AllVideoFragment.newInstance((ArrayList<Uri>) LeftDoorPlaylist);
         // 初始化fragment管理器
         fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction().add(R.id.fragment_container, AllFragment).hide(AllFragment).commit();
+        fragmentManager.beginTransaction().add(R.id.fragment_container, AllFragment).commit();
         new Thread(new Runnable() {
             @Override
             public void run() {
                 UDP_receive();
             }
         }).start();
-
+        DoorView.start();
     }
 
     private void init(){
@@ -148,12 +147,10 @@ public class MainActivity extends AppCompatActivity {
 
     // 接收CAN总线
     private void UDP_receive() {
-        byte[] receMsgs = new byte[14];
-        DatagramSocket datagramSocket;
-        DatagramPacket datagramPacket;
-        DoorView.pause();
-        fragmentManager.beginTransaction().show(AllFragment).commit();
         try {
+        byte[] receMsgs = new byte[1024];
+        DatagramSocket datagramSocket = null;
+        DatagramPacket datagramPacket;
             datagramSocket = new DatagramSocket(5556);
             while (true) {
                 datagramPacket = new DatagramPacket(receMsgs, receMsgs.length);
@@ -180,13 +177,13 @@ public class MainActivity extends AppCompatActivity {
                     switch (data) {
                         case LeftDoorCommand.Auto:
                             fragmentManager.beginTransaction().show(AllFragment).commit();
+                            DoorView.pause();
                             break;
                         case LeftDoorCommand.Remote:
-                            // 修改左右门
                             DoorView.setVideoURI(RightDoorlist.get(6));
                             DoorView.start();
-                            AllFragment.cancel();
                             fragmentManager.beginTransaction().hide(AllFragment).commit();
+                            AllFragment.cancel();
                             break;
                     }
                 case LeftDoorCommand.Left_Work_Sts:
