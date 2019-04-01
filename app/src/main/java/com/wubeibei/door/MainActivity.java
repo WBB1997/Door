@@ -19,6 +19,7 @@ import com.wubeibei.door.util.LogUtil;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -148,55 +149,54 @@ public class MainActivity extends AppCompatActivity {
     // 接收CAN总线
     private void UDP_receive() {
         try {
-        byte[] receMsgs = new byte[1024];
-        DatagramSocket datagramSocket = null;
-        DatagramPacket datagramPacket;
-            datagramSocket = new DatagramSocket(5556);
+            DatagramSocket datagramSocket = new DatagramSocket(null);
+            datagramSocket.setReuseAddress(true);
+            datagramSocket.bind(new InetSocketAddress(5556));
+
+            DatagramPacket datagramPacket;
             while (true) {
+                byte[] receMsgs = new byte[1024];
                 datagramPacket = new DatagramPacket(receMsgs, receMsgs.length);
-                datagramSocket.receive(datagramPacket);
-                dispose(datagramPacket.getData());
+                // 读取到命令
+                try {
+                    datagramSocket.receive(datagramPacket);
+                    JSONObject jsonObject = JSONObject.parseObject(new String(receMsgs));
+                    LogUtil.d(TAG, jsonObject.toJSONString());
+                    int id = jsonObject.getIntValue("id");
+                    int data;
+                    switch (id) {
+                        case LeftDoorCommand.Driver_model:
+                            data = jsonObject.getIntValue("data");
+                            switch (data) {
+                                case LeftDoorCommand.Auto:
+                                    fragmentManager.beginTransaction().show(AllFragment).commit();
+                                    DoorView.pause();
+                                    break;
+                                case LeftDoorCommand.Remote:
+                                    DoorView.setVideoURI(RightDoorlist.get(6));
+                                    DoorView.start();
+                                    fragmentManager.beginTransaction().hide(AllFragment).commit();
+                                    AllFragment.cancel();
+                                    break;
+                            }
+                        case LeftDoorCommand.Left_Work_Sts:
+                            data = jsonObject.getIntValue("data");
+                            showDoorState(LeftDoorlist, data);
+                            break;
+                        case RightDoorCommand.Right_Work_Sts:
+                            data = jsonObject.getIntValue("data");
+                            showDoorState(RightDoorlist, data);
+                            break;
+                    }
+                } catch (IOException e) {
+                    // 命令解释错误则重新读取命令
+                    e.printStackTrace();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             UDP_receive();
-        }
-    }
-
-    // 处理收到的byte数组
-    private void dispose(byte[] receMsgs) {
-        try {
-            JSONObject jsonObject = JSONObject.parseObject(new String(receMsgs));
-            LogUtil.d(TAG, jsonObject.toJSONString());
-            int id = jsonObject.getIntValue("id");
-            int data;
-            switch (id) {
-                case LeftDoorCommand.Driver_model:
-                    data = jsonObject.getIntValue("data");
-                    switch (data) {
-                        case LeftDoorCommand.Auto:
-                            fragmentManager.beginTransaction().show(AllFragment).commit();
-                            DoorView.pause();
-                            break;
-                        case LeftDoorCommand.Remote:
-                            DoorView.setVideoURI(RightDoorlist.get(6));
-                            DoorView.start();
-                            fragmentManager.beginTransaction().hide(AllFragment).commit();
-                            AllFragment.cancel();
-                            break;
-                    }
-                case LeftDoorCommand.Left_Work_Sts:
-                    data = jsonObject.getIntValue("data");
-                    showDoorState(LeftDoorlist, data);
-                    break;
-                case RightDoorCommand.Right_Work_Sts:
-                    data = jsonObject.getIntValue("data");
-                    showDoorState(RightDoorlist, data);
-                    break;
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
         }
     }
 
