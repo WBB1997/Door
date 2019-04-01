@@ -1,6 +1,7 @@
 package com.wubeibei.door.fragment;
 
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.Fragment;
@@ -17,12 +18,12 @@ import java.util.ArrayList;
 public class AllVideoFragment extends Fragment {
     private VideoView videoView;
     private int AllVideo_index = 0;
-    private ArrayList<String> list;
+    private ArrayList<Uri> list;
 
     public AllVideoFragment() {
     }
 
-    public static AllVideoFragment newInstance(ArrayList<String> stringList) {
+    public static AllVideoFragment newInstance(ArrayList<Uri> stringList) {
         AllVideoFragment fragment = new AllVideoFragment();
         Bundle args = new Bundle();
         args.putSerializable("list", stringList);
@@ -40,8 +41,8 @@ public class AllVideoFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_all_video, container, false);
         videoView = view.findViewById(R.id.AllVideo);
         if (getArguments() != null) {
-            list = (ArrayList<String>) getArguments().getSerializable("list");
-            videoView.setVideoPath(list.get(AllVideo_index));
+            list = (ArrayList<Uri>) getArguments().getSerializable("list");
+            videoView.setVideoURI(list.get(AllVideo_index));
             this.setOnCompletionListener();
         }
         return view;
@@ -52,7 +53,7 @@ public class AllVideoFragment extends Fragment {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 AllVideo_index++;
-                videoView.setVideoPath(list.get(AllVideo_index % list.size()));
+                videoView.setVideoURI(list.get(AllVideo_index % list.size()));
                 videoView.start();
             }
         });
@@ -64,21 +65,20 @@ public class AllVideoFragment extends Fragment {
         if (!hidden) {
             videoView.start();
         } else {
-            if (videoView.isPlaying())
-                videoView.pause();
+            videoView.pause();
         }
     }
 
-    public void pause(){
-        if(videoView.isPlaying())
-            videoView.pause();
+    public void cancel(){
+        AllVideo_index = 0;
+        videoView.setVideoURI(list.get(AllVideo_index));
+    }
+
+    public void pause() {
+        videoView.pause();
     }
 
     public void start(){
-        videoView.start();
-    }
-
-    public void resume(){
         videoView.start();
     }
 }

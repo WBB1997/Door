@@ -1,11 +1,9 @@
 package com.wubeibei.door;
 
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -30,48 +28,28 @@ public class MainActivity extends AppCompatActivity {
     private AllVideoFragment AllFragment;
     private FragmentManager fragmentManager;
     private VideoView DoorView;
-
-
-    private List<String> LeftDoorlist = new ArrayList<>(Arrays.asList(
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/DoorClose.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/DoorOpen.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/End.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/Fache.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/Start.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/Tingkao.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/Welcome.mp4"
-    ));
-    private List<String> RightDoorlist = new ArrayList<>(Arrays.asList(
-            Environment.getExternalStorageDirectory() + "/MiniBus/RightDoor/DoorClose.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/RightDoor/DoorOpen.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/RightDoor/End.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/RightDoor/Fache.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/RightDoor/Start.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/RightDoor/Tingkao.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/RightDoor/Welcome.mp4"
-    ));
-    private List<String> LeftDoorPlayList = new ArrayList<>(Arrays.asList(
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/Welcome.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/Start.mp4",
-            Environment.getExternalStorageDirectory() + "/MiniBus/LeftDoor/Start.mp4"
-    ));
-
+    private List<Uri> LeftDoorlist;
+    private List<Uri> RightDoorlist;
+    private List<Uri> RightDoorPlaylist;
+    private List<Uri> LeftDoorPlaylist;
     private final static int closing = 0;
     private final static int opening = 1;
+    private final static int welcome = 6;
+    private final static int tingkao = 5;
+    private final static int arrow = 4;
+    private final static int start = 3;
+    private final static int end = 2;
+    private final static int dooropen = 1;
+    private final static int doorclose = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        init();
         hideBottomUIMenu();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                UDP_receive();
-            }
-        }).start();
         DoorView = findViewById(R.id.DoorVideo);
-        DoorView.setVideoPath(RightDoorlist.get(6));
+        DoorView.setVideoURI(RightDoorlist.get(6));
         DoorView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
@@ -80,10 +58,92 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         DoorView.start();
-        AllFragment = AllVideoFragment.newInstance((ArrayList<String>) LeftDoorPlayList);
+        AllFragment = AllVideoFragment.newInstance((ArrayList<Uri>) LeftDoorPlaylist);
         // 初始化fragment管理器
         fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction().add(R.id.fragment_container, AllFragment).hide(AllFragment).show(AllFragment).commit();
+        fragmentManager.beginTransaction().add(R.id.fragment_container, AllFragment).hide(AllFragment).commit();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                UDP_receive();
+            }
+        }).start();
+
+    }
+
+    private void init(){
+        LeftDoorlist = new ArrayList<>(Arrays.asList(
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_doorclose),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_dooropen),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_end),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_start),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_arrow),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_tingkao),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_welcome)
+        ));
+        RightDoorlist = new ArrayList<>(Arrays.asList(
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_doorclose),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_dooropen),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_end),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_start),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_arrow),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_tingkao),
+                Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_welcome)
+        ));
+        RightDoorPlaylist = new ArrayList<>(Arrays.asList(
+                RightDoorlist.get(welcome),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(start),
+                RightDoorlist.get(dooropen),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(doorclose),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(tingkao),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(tingkao),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(tingkao),
+                RightDoorlist.get(dooropen),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(doorclose),
+                RightDoorlist.get(end),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(end),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(end),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(dooropen),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(arrow),
+                RightDoorlist.get(doorclose)
+        ));
+        LeftDoorPlaylist = new ArrayList<>(Arrays.asList(
+                LeftDoorlist.get(welcome),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(start),
+                LeftDoorlist.get(dooropen),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(doorclose),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(tingkao),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(tingkao),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(tingkao),
+                LeftDoorlist.get(dooropen),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(doorclose),
+                LeftDoorlist.get(end),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(end),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(end),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(dooropen),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(arrow),
+                LeftDoorlist.get(doorclose)
+        ));
     }
 
     // 接收CAN总线
@@ -91,6 +151,8 @@ public class MainActivity extends AppCompatActivity {
         byte[] receMsgs = new byte[14];
         DatagramSocket datagramSocket;
         DatagramPacket datagramPacket;
+        DoorView.pause();
+        fragmentManager.beginTransaction().show(AllFragment).commit();
         try {
             datagramSocket = new DatagramSocket(5556);
             while (true) {
@@ -113,6 +175,20 @@ public class MainActivity extends AppCompatActivity {
             int id = jsonObject.getIntValue("id");
             int data;
             switch (id) {
+                case LeftDoorCommand.Driver_model:
+                    data = jsonObject.getIntValue("data");
+                    switch (data) {
+                        case LeftDoorCommand.Auto:
+                            fragmentManager.beginTransaction().show(AllFragment).commit();
+                            break;
+                        case LeftDoorCommand.Remote:
+                            // 修改左右门
+                            DoorView.setVideoURI(RightDoorlist.get(6));
+                            DoorView.start();
+                            AllFragment.cancel();
+                            fragmentManager.beginTransaction().hide(AllFragment).commit();
+                            break;
+                    }
                 case LeftDoorCommand.Left_Work_Sts:
                     data = jsonObject.getIntValue("data");
                     showDoorState(LeftDoorlist, data);
@@ -128,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // 显示门的状态
-    private void showDoorState(final List<String> list, final int DoorState) {
+    private void showDoorState(final List<Uri> list, final int DoorState) {
         new Thread() {
             public void run() {
                 runOnUiThread(new Runnable() {
@@ -138,24 +214,26 @@ public class MainActivity extends AppCompatActivity {
                         switch (DoorState) {
                             // opening
                             case 1:
-                                DoorView.setVideoPath(list.get(opening));
+                                play(DoorView, list.get(opening));
+                                AllFragment.pause();
                                 fragmentManager.beginTransaction().hide(AllFragment).commit();
                                 break;
                             // opened
                             case 3:
-                                if (DoorView.isPlaying())
-                                    DoorView.pause();
+                                pause(DoorView);
+                                AllFragment.start();
                                 fragmentManager.beginTransaction().show(AllFragment).commit();
                                 break;
                             // closing
                             case 4:
-                                DoorView.setVideoPath(list.get(closing));
+                                play(DoorView, list.get(closing));
+                                AllFragment.pause();
                                 fragmentManager.beginTransaction().hide(AllFragment).commit();
                                 break;
                             // closed
                             case 0:
-                                if (DoorView.isPlaying())
-                                    DoorView.pause();
+                                pause(DoorView);
+                                AllFragment.start();
                                 fragmentManager.beginTransaction().show(AllFragment).commit();
                                 break;
                             default:
@@ -190,11 +268,11 @@ public class MainActivity extends AppCompatActivity {
 //    }
 
 
-    public void play(final VideoView videoView, final String path) {
+    public void play(final VideoView videoView, final Uri uri) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                videoView.setVideoPath(Environment.getExternalStorageDirectory() + path);
+                videoView.setVideoURI(uri);
                 videoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override
                     public void onCompletion(MediaPlayer mp) {
@@ -212,14 +290,13 @@ public class MainActivity extends AppCompatActivity {
                 new Runnable() {
                     @Override
                     public void run() {
-                        if (videoView.isPlaying())
-                            videoView.pause();
+                        videoView.pause();
                     }
                 }
         );
     }
 
-    public void resume(final VideoView videoView) {
+    public void start(final VideoView videoView) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

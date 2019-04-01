@@ -19,7 +19,7 @@ public class RightDoorCommand {
     public static final int arrtived = 2; //到站提醒
     public static final int start = 3; // 启动信号
 
-    public static final int SystemStatus = 87;
+    public static final int Driver_model = 58;
     public static final int Auto = 0;
-    public static final int Remote = 2;
+    public static final int Remote = 1;
 }
