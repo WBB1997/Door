@@ -4,11 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".fragment.AllVideoFragment">
-
-    <!-- TODO: Update blank fragment layout -->
     <VideoView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/AllVideo"/>
-
 </FrameLayout>

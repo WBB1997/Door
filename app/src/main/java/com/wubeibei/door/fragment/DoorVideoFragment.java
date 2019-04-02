@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.MediaController;
 import android.widget.VideoView;
 
 import com.wubeibei.door.R;
@@ -35,28 +36,37 @@ public class DoorVideoFragment extends Fragment {
         DoorVideo.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
-                mp.setLooping(true);
+                Log.d(TAG, "onCompletion: " + "循环播放");
                 mp.start();
             }
         });
+        DoorVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
+            @Override
+            public boolean onInfo(MediaPlayer mp, int what, int extra) {
+                Log.d(TAG, "onInfo: " + what + "  " + extra);
+                return false;
+            }
+        });
+        DoorVideo.setMediaController(null);
         return view;
     }
+
+
 
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
         Log.d(TAG, "onHiddenChanged: " + hidden);
         if(!hidden){
+            Log.d(TAG, "开始播放");
             DoorVideo.start();
         }else {
+            Log.d(TAG, "暂停播放");
             DoorVideo.pause();
         }
     }
 
     public void setVideoURI(Uri uri) {
-        if(DoorVideo.isPlaying())
-            DoorVideo.stopPlayback();
-        DoorVideo.setMediaController(null);
         DoorVideo.setVideoURI(uri);
     }
 

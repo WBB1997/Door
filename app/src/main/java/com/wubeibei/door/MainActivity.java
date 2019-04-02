@@ -1,5 +1,6 @@
 package com.wubeibei.door;
 
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.support.v4.app.Fragment;
@@ -9,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.VideoView;
 
 import com.alibaba.fastjson.JSONObject;
 import com.wubeibei.door.command.LeftDoorCommand;
@@ -27,13 +29,9 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-    private AllVideoFragment AllFragment;
-    private DoorVideoFragment doorVideoFragment;
-    private FragmentManager fragmentManager;
-    private List<Uri> LeftDoorlist;
-    private List<Uri> RightDoorlist;
-    private List<Uri> RightDoorPlaylist;
-    private List<Uri> LeftDoorPlaylist;
+    private List<Uri> DoorPlaylist;
+    private List<Uri> Doorlist;
+    private final static boolean flag = true; // true 为左门
     private final static int closing = 0;
     private final static int opening = 1;
     private final static int welcome = 6;
@@ -44,19 +42,26 @@ public class MainActivity extends AppCompatActivity {
     private final static int dooropen = 1;
     private final static int doorclose = 0;
 
+    private boolean AutoState = false;
+
+    private int msec = 0;
+    private int videoindex = 0;
+    private VideoView videoView;
+    private circulPlay circulPlay = new circulPlay();
+    private sequencePlay sequencePlay;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         init();
         hideBottomUIMenu();
-        AllFragment = AllVideoFragment.newInstance((ArrayList<Uri>) LeftDoorPlaylist);
-        doorVideoFragment = DoorVideoFragment.newInstance();
-        // 初始化fragment管理器
-        fragmentManager = getSupportFragmentManager();
-        showFragment(AllFragment);
-        showFragment(doorVideoFragment);
-
+        videoView = findViewById(R.id.videoview);
+        sequencePlay = new sequencePlay();
+        videoView.setVideoURI(Doorlist.get(welcome));
+        videoView.start();
+        videoView.setOnCompletionListener(new circulPlay());
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -66,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void init(){
-        LeftDoorlist = new ArrayList<>(Arrays.asList(
+        List<Uri> leftDoorlist = new ArrayList<>(Arrays.asList(
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_doorclose),
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_dooropen),
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_end),
@@ -75,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_tingkao),
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_welcome)
         ));
-        RightDoorlist = new ArrayList<>(Arrays.asList(
+        List<Uri> rightDoorlist = new ArrayList<>(Arrays.asList(
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_doorclose),
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_dooropen),
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_end),
@@ -84,60 +89,68 @@ public class MainActivity extends AppCompatActivity {
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_tingkao),
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.right_welcome)
         ));
-        RightDoorPlaylist = new ArrayList<>(Arrays.asList(
-                RightDoorlist.get(welcome),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(start),
-                RightDoorlist.get(dooropen),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(doorclose),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(tingkao),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(tingkao),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(tingkao),
-                RightDoorlist.get(dooropen),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(doorclose),
-                RightDoorlist.get(end),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(end),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(end),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(dooropen),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(arrow),
-                RightDoorlist.get(doorclose)
+        List<Uri> rightPlayDoorlist = new ArrayList<>(Arrays.asList(
+                rightDoorlist.get(welcome),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(start),
+                rightDoorlist.get(dooropen),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(doorclose),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(tingkao),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(tingkao),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(tingkao),
+                rightDoorlist.get(dooropen),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(doorclose),
+                rightDoorlist.get(end),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(end),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(end),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(dooropen),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(arrow),
+                rightDoorlist.get(doorclose)
         ));
-        LeftDoorPlaylist = new ArrayList<>(Arrays.asList(
-                LeftDoorlist.get(welcome),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(start),
-                LeftDoorlist.get(dooropen),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(doorclose),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(tingkao),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(tingkao),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(tingkao),
-                LeftDoorlist.get(dooropen),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(doorclose),
-                LeftDoorlist.get(end),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(end),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(end),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(dooropen),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(arrow),
-                LeftDoorlist.get(doorclose)
+        List<Uri> leftPlayDoorlist = new ArrayList<>(Arrays.asList(
+                leftDoorlist.get(welcome),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(start),
+                leftDoorlist.get(dooropen),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(doorclose),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(tingkao),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(tingkao),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(tingkao),
+                leftDoorlist.get(dooropen),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(doorclose),
+                leftDoorlist.get(end),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(end),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(end),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(dooropen),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(arrow),
+                leftDoorlist.get(doorclose)
         ));
+        if(flag) {
+            Doorlist = leftDoorlist;
+            DoorPlaylist = leftPlayDoorlist;
+        }
+        else {
+            Doorlist = rightDoorlist;
+            DoorPlaylist = rightPlayDoorlist;
+        }
     }
 
     // 接收CAN总线
@@ -146,9 +159,6 @@ public class MainActivity extends AppCompatActivity {
             DatagramSocket datagramSocket = new DatagramSocket(null);
             datagramSocket.setReuseAddress(true);
             datagramSocket.bind(new InetSocketAddress(5556));
-
-            doorVideoFragment.setVideoURI(LeftDoorlist.get(welcome));
-            doorVideoFragment.start();
 
             DatagramPacket datagramPacket;
             while (true) {
@@ -166,25 +176,20 @@ public class MainActivity extends AppCompatActivity {
                             data = jsonObject.getIntValue("data");
                             switch (data) {
                                 case LeftDoorCommand.Auto:
-                                    showFragment(AllFragment);
+                                    setAuto();
                                     break;
                                 case LeftDoorCommand.Remote:
-                                    // 这里修改
-                                    Log.d(TAG, "UDP_receive: " + doorVideoFragment.isHidden());
-//                                    doorVideoFragment.setVideoURI(LeftDoorlist.get(welcome));
-                                    Log.d(TAG, "UDP_receive: " + doorVideoFragment.isHidden());
-                                    showFragment(doorVideoFragment);
-                                    Log.d(TAG, "UDP_receive: " + doorVideoFragment.isHidden());
-                                    AllFragment.cancel();
+                                    setRemote();
                                     break;
                             }
+                            break;
                         case LeftDoorCommand.Left_Work_Sts:
-                            data = jsonObject.getIntValue("data");
-                            showDoorState(LeftDoorlist, data);
+                            if (flag)
+                                showDoorState(jsonObject.getIntValue("data"));
                             break;
                         case RightDoorCommand.Right_Work_Sts:
-                            data = jsonObject.getIntValue("data");
-                            showDoorState(RightDoorlist, data);
+                            if (!flag)
+                                showDoorState(jsonObject.getIntValue("data"));
                             break;
                     }
                 } catch (IOException e) {
@@ -199,62 +204,107 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //替换fragment
-    public void showFragment(final Fragment fragment) {
-        this.runOnUiThread(new Runnable() {
+    private void setAuto(){
+        runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                // 获得一个 FragmentTransaction 的实例
-                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+                videoView.setVideoURI(DoorPlaylist.get(videoindex % DoorPlaylist.size()));
+                videoView.setOnCompletionListener(sequencePlay);
+                videoView.seekTo(msec);
+                videoView.start();
+                Log.d(TAG, "setAuto: 开始于 ： " + videoindex + "/" + msec);
+                AutoState = true;
+            }
+        });
+    }
 
-                // 先隐藏所有fragment
-                for (Fragment fragment1 : fragmentManager.getFragments())
-                    fragmentTransaction.hide(fragment1);
-
-                // 再显示fragment
-                if (fragment.isAdded())
-                    fragmentTransaction.show(fragment);
-                else
-                    fragmentTransaction.add(R.id.fragment_container, fragment);
-                fragmentTransaction.commit();
+    private void setRemote(){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                videoView.setVideoURI(Doorlist.get(welcome));
+                videoView.setOnCompletionListener(circulPlay);
+                msec = 0;
+                videoindex = 0;
+                videoView.start();
+                AutoState = false;
             }
         });
     }
 
     // 显示门的状态
-    private void showDoorState(final List<Uri> list, final int DoorState) {
-        new Thread() {
+    private void showDoorState(final int DoorState) {
+        runOnUiThread(new Runnable() {
+            @Override
             public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        //更新UI
-                        switch (DoorState) {
-                            // opening
-                            case 1:
-                                doorVideoFragment.setVideoURI(list.get(opening));
-                                showFragment(doorVideoFragment);
-                                break;
-                            // opened
-                            case 3:
-                                showFragment(AllFragment);
-                                break;
-                            // closing
-                            case 4:
-                                doorVideoFragment.setVideoURI(list.get(closing));
-                                showFragment(doorVideoFragment);
-                                break;
-                            // closed
-                            case 0:
-                                showFragment(AllFragment);
-                                break;
-                            default:
-                                break;
+                //更新UI
+                switch (DoorState) {
+                    // opening
+                    case 1:
+                        videoView.pause();
+                        if (AutoState) {
+                            if (videoView.getCurrentPosition() == videoView.getDuration())
+                                msec = 0;
+                            else
+                                msec = videoView.getCurrentPosition();
                         }
-                    }
-                });
+                        Log.d(TAG, "run: 暂停于 ： " + videoindex + "/" + msec);
+                        videoView.setVideoURI(Doorlist.get(opening));
+                        videoView.setOnCompletionListener(circulPlay);
+                        videoView.start();
+                        break;
+                    // opened
+                    case 3:
+                        if (AutoState)
+                            setAuto();
+                        else
+                            setRemote();
+                        break;
+                    // closing
+                    case 4:
+                        videoView.pause();
+                        if (AutoState) {
+                            if (videoView.getCurrentPosition() == videoView.getDuration())
+                                msec = 0;
+                            else
+                                msec = videoView.getCurrentPosition();
+                        }
+                        Log.d(TAG, "run: 暂停于 ： " + videoindex + "/" + msec);
+                        videoView.setVideoURI(Doorlist.get(closing));
+                        videoView.setOnCompletionListener(circulPlay);
+                        videoView.start();
+                        break;
+                    // closed
+                    case 0:
+                        if (AutoState)
+                            setAuto();
+                        else
+                            setRemote();
+                        break;
+                    default:
+                        break;
+                }
             }
-        }.start();
+        });
+    }
+
+    class circulPlay implements MediaPlayer.OnCompletionListener {
+
+        @Override
+        public void onCompletion(MediaPlayer mp) {
+            Log.d(TAG, "onCompletion: " + "循环播放");
+            mp.start();
+        }
+    }
+
+    class sequencePlay implements MediaPlayer.OnCompletionListener{
+        @Override
+        public void onCompletion(MediaPlayer mp) {
+            videoindex++;
+            Log.d(TAG, "onCompletion: " + "切换到 " + videoindex);
+            videoView.setVideoURI(DoorPlaylist.get(videoindex % DoorPlaylist.size()));
+            videoView.start();
+        }
     }
 
     /**

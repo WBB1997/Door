@@ -54,6 +54,7 @@ public class AllVideoFragment extends Fragment {
         videoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
+                Log.d(TAG, "onCompletion: " + "切换到 " + AllVideo_index);
                 AllVideo_index++;
                 videoView.setVideoURI(list.get(AllVideo_index % list.size()));
                 videoView.start();
@@ -64,9 +65,14 @@ public class AllVideoFragment extends Fragment {
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
+        Log.d(TAG, "onHiddenChanged: " + hidden);
         if (!hidden) {
+            Log.d(TAG, "开始播放");
+            videoView.setZOrderOnTop(true);
             videoView.start();
         } else {
+            Log.d(TAG, "暂停播放");
+            videoView.setZOrderOnTop(false);
             videoView.pause();
         }
     }
@@ -82,7 +88,8 @@ public class AllVideoFragment extends Fragment {
         videoView.pause();
     }
 
-    public void start(){
-        videoView.start();
+    public void start() {
+        if (!videoView.isPlaying())
+            videoView.start();
     }
 }
