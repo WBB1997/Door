@@ -1,19 +1,20 @@
 package com.wubeibei.door;
 
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
-import android.widget.VideoView;
 
-import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 import com.wubeibei.door.command.LeftDoorCommand;
 import com.wubeibei.door.command.RightDoorCommand;
 import com.wubeibei.door.fragment.AllVideoFragment;
+import com.wubeibei.door.fragment.DoorVideoFragment;
 import com.wubeibei.door.util.LogUtil;
 
 import java.io.IOException;
@@ -27,8 +28,8 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private AllVideoFragment AllFragment;
+    private DoorVideoFragment doorVideoFragment;
     private FragmentManager fragmentManager;
-    private VideoView DoorView;
     private List<Uri> LeftDoorlist;
     private List<Uri> RightDoorlist;
     private List<Uri> RightDoorPlaylist;
@@ -49,26 +50,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         init();
         hideBottomUIMenu();
-        DoorView = findViewById(R.id.DoorVideo);
-        DoorView.setVideoURI(RightDoorlist.get(6));
-        DoorView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                mp.setLooping(true);
-                mp.start();
-            }
-        });
         AllFragment = AllVideoFragment.newInstance((ArrayList<Uri>) LeftDoorPlaylist);
+        doorVideoFragment = DoorVideoFragment.newInstance();
         // 初始化fragment管理器
         fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction().add(R.id.fragment_container, AllFragment).commit();
+        showFragment(AllFragment);
+        showFragment(doorVideoFragment);
+
         new Thread(new Runnable() {
             @Override
             public void run() {
                 UDP_receive();
             }
         }).start();
-        DoorView.start();
     }
 
     private void init(){
@@ -153,6 +147,9 @@ public class MainActivity extends AppCompatActivity {
             datagramSocket.setReuseAddress(true);
             datagramSocket.bind(new InetSocketAddress(5556));
 
+            doorVideoFragment.setVideoURI(LeftDoorlist.get(welcome));
+            doorVideoFragment.start();
+
             DatagramPacket datagramPacket;
             while (true) {
                 byte[] receMsgs = new byte[1024];
@@ -169,13 +166,15 @@ public class MainActivity extends AppCompatActivity {
                             data = jsonObject.getIntValue("data");
                             switch (data) {
                                 case LeftDoorCommand.Auto:
-                                    fragmentManager.beginTransaction().show(AllFragment).commit();
-                                    DoorView.pause();
+                                    showFragment(AllFragment);
                                     break;
                                 case LeftDoorCommand.Remote:
-                                    DoorView.setVideoURI(RightDoorlist.get(6));
-                                    DoorView.start();
-                                    fragmentManager.beginTransaction().hide(AllFragment).commit();
+                                    // 这里修改
+                                    Log.d(TAG, "UDP_receive: " + doorVideoFragment.isHidden());
+//                                    doorVideoFragment.setVideoURI(LeftDoorlist.get(welcome));
+                                    Log.d(TAG, "UDP_receive: " + doorVideoFragment.isHidden());
+                                    showFragment(doorVideoFragment);
+                                    Log.d(TAG, "UDP_receive: " + doorVideoFragment.isHidden());
                                     AllFragment.cancel();
                                     break;
                             }
@@ -200,6 +199,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //替换fragment
+    public void showFragment(final Fragment fragment) {
+        this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // 获得一个 FragmentTransaction 的实例
+                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+                // 先隐藏所有fragment
+                for (Fragment fragment1 : fragmentManager.getFragments())
+                    fragmentTransaction.hide(fragment1);
+
+                // 再显示fragment
+                if (fragment.isAdded())
+                    fragmentTransaction.show(fragment);
+                else
+                    fragmentTransaction.add(R.id.fragment_container, fragment);
+                fragmentTransaction.commit();
+            }
+        });
+    }
+
     // 显示门的状态
     private void showDoorState(final List<Uri> list, final int DoorState) {
         new Thread() {
@@ -211,27 +232,21 @@ public class MainActivity extends AppCompatActivity {
                         switch (DoorState) {
                             // opening
                             case 1:
-                                play(DoorView, list.get(opening));
-                                AllFragment.pause();
-                                fragmentManager.beginTransaction().hide(AllFragment).commit();
+                                doorVideoFragment.setVideoURI(list.get(opening));
+                                showFragment(doorVideoFragment);
                                 break;
                             // opened
                             case 3:
-                                pause(DoorView);
-                                AllFragment.start();
-                                fragmentManager.beginTransaction().show(AllFragment).commit();
+                                showFragment(AllFragment);
                                 break;
                             // closing
                             case 4:
-                                play(DoorView, list.get(closing));
-                                AllFragment.pause();
-                                fragmentManager.beginTransaction().hide(AllFragment).commit();
+                                doorVideoFragment.setVideoURI(list.get(closing));
+                                showFragment(doorVideoFragment);
                                 break;
                             // closed
                             case 0:
-                                pause(DoorView);
-                                AllFragment.start();
-                                fragmentManager.beginTransaction().show(AllFragment).commit();
+                                showFragment(AllFragment);
                                 break;
                             default:
                                 break;
@@ -240,66 +255,6 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         }.start();
-    }
-
-//    //替换fragment
-//    public void replaceFragment(final Fragment fragment) {
-//        this.runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                // 获得一个 FragmentTransaction 的实例
-//                FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-//
-//                // 先隐藏所有fragment
-//                for (Fragment fragment1 : fragmentManager.getFragments())
-//                    fragmentTransaction.hide(fragment1);
-//
-//                // 再显示fragment
-//                if (fragment.isAdded())
-//                    fragmentTransaction.show(fragment);
-//                else
-//                    fragmentTransaction.add(R.id.fragment_container, fragment);
-//                fragmentTransaction.commitAllowingStateLoss();
-//            }
-//        });
-//    }
-
-
-    public void play(final VideoView videoView, final Uri uri) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                videoView.setVideoURI(uri);
-                videoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                    @Override
-                    public void onCompletion(MediaPlayer mp) {
-                        mp.setLooping(true);
-                        mp.start();
-                    }
-                });
-                videoView.start();
-            }
-        });
-    }
-
-    public void pause(final VideoView videoView) {
-        runOnUiThread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        videoView.pause();
-                    }
-                }
-        );
-    }
-
-    public void start(final VideoView videoView) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                videoView.start();
-            }
-        });
     }
 
     /**

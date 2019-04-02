@@ -66,13 +66,14 @@ public class AllVideoFragment extends Fragment {
         super.onHiddenChanged(hidden);
         if (!hidden) {
             videoView.start();
-            Log.d(TAG, "onHiddenChanged: " + hidden);
         } else {
             videoView.pause();
         }
     }
 
     public void cancel(){
+        if(videoView.isPlaying())
+            videoView.stopPlayback();
         AllVideo_index = 0;
         videoView.setVideoURI(list.get(AllVideo_index));
     }
