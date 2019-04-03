@@ -4,6 +4,7 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.util.Pair;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -17,15 +18,20 @@ import com.wubeibei.door.util.LogUtil;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private List<Uri> DoorPlaylist;
     private List<Uri> Doorlist;
+    private Map<Integer, byte[]> SendMap;
     private final static boolean flag = true; // true 为左门
     private final static int closing = 0;
     private final static int opening = 1;
@@ -44,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
     private VideoView videoView;
     private circulPlay circulPlay = new circulPlay();
     private sequencePlay sequencePlay;
+
+    private final static String HostIp = "192.168.1.10";
+    private final static int HostPort = 4001;
 
 
     @Override
@@ -66,6 +75,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void init(){
+        SendMap = new HashMap<Integer, byte[]>(){
+            {
+                put(0, new byte[]{(byte) 0xAA, (byte) 0xBB, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+                put(5, new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+                put(10, new byte[]{(byte) 0xAA, (byte) 0xBB, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x36});
+                put(11, new byte[]{(byte) 0xAA, (byte) 0xBB, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+                put(12, new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+                put(13, new byte[]{(byte) 0xAA, (byte) 0xBB, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x36});
+                put(14, new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+                put(20, new byte[]{(byte) 0xAA, (byte) 0xBB, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+                put(21, new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+            }
+        };
         List<Uri> leftDoorlist = new ArrayList<>(Arrays.asList(
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_doorclose),
                 Uri.parse("android.resource://" + getPackageName() + "/raw/" + R.raw.left_dooropen),
@@ -199,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setAuto(){
+    private void setAuto() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -209,6 +231,8 @@ public class MainActivity extends AppCompatActivity {
                 videoView.start();
                 Log.d(TAG, "setAuto: 开始于 ： " + videoindex + "/" + msec);
                 AutoState = true;
+                if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
+                    send(SendMap.get(videoindex % DoorPlaylist.size()));
             }
         });
     }
@@ -299,12 +323,32 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "onCompletion: " + "切换到 " + videoindex);
             videoView.setVideoURI(DoorPlaylist.get(videoindex % DoorPlaylist.size()));
             videoView.start();
+            if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
+                send(SendMap.get(videoindex % DoorPlaylist.size()));
         }
     }
 
-    /**
-     * 隐藏虚拟按键，并且全屏
-     */
+    private void send(final byte[] bytes){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                DatagramSocket datagramSocket = null;
+                DatagramPacket datagramPacket;
+                try {
+                    datagramSocket = new DatagramSocket();
+                    datagramPacket = new DatagramPacket(bytes, bytes.length, InetAddress.getByName(HostIp), HostPort);
+                    datagramSocket.send(datagramPacket);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (datagramSocket != null) {
+                        datagramSocket.close();
+                    }
+                }
+            }
+        }).start();
+    }
+
     protected void hideBottomUIMenu() {
         //隐藏虚拟按键，并且全屏
         if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
