@@ -3,10 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity"
-    android:background="@color/colorPrimary">
+    android:background="@color/colorPrimary"
+    tools:context=".MainActivity">
+
     <VideoView
+        android:id="@+id/videoview"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/videoview"/>
+        android:layout_height="match_parent" />
 </FrameLayout>
