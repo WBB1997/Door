@@ -14,6 +14,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.wubeibei.door.command.LeftDoorCommand;
 import com.wubeibei.door.command.RightDoorCommand;
 import com.wubeibei.door.util.ByteUtil;
+import com.wubeibei.door.util.CrashHandler;
 import com.wubeibei.door.util.LogUtil;
 
 import java.io.IOException;
@@ -60,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        CrashHandler.getInstance().init(this);
         init();
         hideBottomUIMenu();
         videoView = findViewById(R.id.videoview);
