@@ -68,18 +68,18 @@ public class MyTimer extends Thread {
         this.start = start;
     }
 
-    public void cancelTimer() {
+    public synchronized void cancelTimer() {
         setPause(false);
         setStart(false);
         this.interrupt();
     }
 
-    public void pauseTimer() {
+    public synchronized void pauseTimer() {
         setPause(true);
         this.interrupt();
     }
 
-    public void startTimer() {
+    public synchronized void startTimer() {
         setPause(false);
         setStart(true);
     }

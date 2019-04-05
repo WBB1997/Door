@@ -300,11 +300,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void didScene() {
         if (AutoState) {
-            myTimer.startTimer();
             setAuto();
+            myTimer.startTimer();
         } else {
-//            myTimer.cancelTimer();
             setRemote();
+            myTimer.cancelTimer();
         }
     }
 
