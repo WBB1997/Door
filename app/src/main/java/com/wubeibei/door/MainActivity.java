@@ -13,6 +13,7 @@ import android.widget.VideoView;
 import com.alibaba.fastjson.JSONObject;
 import com.wubeibei.door.command.LeftDoorCommand;
 import com.wubeibei.door.command.RightDoorCommand;
+import com.wubeibei.door.util.ByteUtil;
 import com.wubeibei.door.util.LogUtil;
 
 import java.io.IOException;
@@ -51,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private circulPlay circulPlay = new circulPlay();
     private sequencePlay sequencePlay;
 
-    private final static String HostIp = "192.168.1.10";
+    private final static String HostIp = "192.168.43.1";
     private final static int HostPort = 4001;
 
 
@@ -231,8 +232,10 @@ public class MainActivity extends AppCompatActivity {
                 videoView.start();
                 Log.d(TAG, "setAuto: 开始于 ： " + videoindex + "/" + msec);
                 AutoState = true;
-                if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
-                    send(SendMap.get(videoindex % DoorPlaylist.size()));
+                if(flag) {
+                    if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
+                        send(SendMap.get(videoindex % DoorPlaylist.size()));
+                }
             }
         });
     }
@@ -323,8 +326,10 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "onCompletion: " + "切换到 " + videoindex);
             videoView.setVideoURI(DoorPlaylist.get(videoindex % DoorPlaylist.size()));
             videoView.start();
-            if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
-                send(SendMap.get(videoindex % DoorPlaylist.size()));
+            if(flag) {
+                if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
+                    send(SendMap.get(videoindex % DoorPlaylist.size()));
+            }
         }
     }
 
@@ -337,6 +342,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     datagramSocket = new DatagramSocket();
                     datagramPacket = new DatagramPacket(bytes, bytes.length, InetAddress.getByName(HostIp), HostPort);
+                    Log.d(TAG, "run: " + ByteUtil.bytesToHex(bytes));
                     datagramSocket.send(datagramPacket);
                 } catch (IOException e) {
                     e.printStackTrace();
