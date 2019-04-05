@@ -14,8 +14,8 @@ import com.alibaba.fastjson.JSONObject;
 import com.wubeibei.door.command.LeftDoorCommand;
 import com.wubeibei.door.command.RightDoorCommand;
 import com.wubeibei.door.util.ByteUtil;
-import com.wubeibei.door.util.CrashHandler;
 import com.wubeibei.door.util.LogUtil;
+import com.wubeibei.door.util.MyTimer;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -56,12 +56,13 @@ public class MainActivity extends AppCompatActivity {
     private final static String HostIp = "192.168.43.1";
     private final static int HostPort = 4001;
 
+    private MyTimer myTimer;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        CrashHandler.getInstance().init(this);
         init();
         hideBottomUIMenu();
         videoView = findViewById(R.id.videoview);
@@ -75,6 +76,20 @@ public class MainActivity extends AppCompatActivity {
                 UDP_receive();
             }
         }).start();
+        myTimer = new MyTimer(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        videoindex = 0;
+                        msec = 0;
+                        setAuto();
+                    }
+                });
+            }
+        });
+        myTimer.start();
     }
 
     private void init(){
@@ -190,18 +205,25 @@ public class MainActivity extends AppCompatActivity {
                     JSONObject jsonObject = JSONObject.parseObject(new String(receMsgs));
                     LogUtil.d(TAG, jsonObject.toJSONString());
                     int id = jsonObject.getIntValue("id");
-                    int data;
+                    final int data;
                     switch (id) {
                         case LeftDoorCommand.Driver_model:
                             data = jsonObject.getIntValue("data");
-                            switch (data) {
-                                case LeftDoorCommand.Auto:
-                                    setAuto();
-                                    break;
-                                case LeftDoorCommand.Remote:
-                                    setRemote();
-                                    break;
-                            }
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    switch (data) {
+                                        case LeftDoorCommand.Auto:
+                                            setAuto();
+                                            myTimer.startTimer();
+                                            break;
+                                        case LeftDoorCommand.Remote:
+                                            setRemote();
+                                            myTimer.cancelTimer();
+                                            break;
+                                    }
+                                }
+                            });
                             break;
                         case LeftDoorCommand.Left_Work_Sts:
                             if (flag)
@@ -225,35 +247,25 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setAuto() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                videoView.setVideoURI(DoorPlaylist.get(videoindex % DoorPlaylist.size()));
-                videoView.setOnCompletionListener(sequencePlay);
-                videoView.seekTo(msec);
-                videoView.start();
-                Log.d(TAG, "setAuto: 开始于 ： " + videoindex + "/" + msec);
-                AutoState = true;
-                if(flag) {
-                    if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
-                        send(SendMap.get(videoindex % DoorPlaylist.size()));
-                }
-            }
-        });
+        videoView.setVideoURI(DoorPlaylist.get(videoindex % DoorPlaylist.size()));
+        videoView.setOnCompletionListener(sequencePlay);
+        videoView.seekTo(msec);
+        videoView.start();
+        Log.d(TAG, "setAuto: 开始于 ： " + videoindex + "/" + msec);
+        AutoState = true;
+        if (flag) {
+            if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
+                send(SendMap.get(videoindex % DoorPlaylist.size()));
+        }
     }
 
-    private void setRemote(){
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                videoView.setVideoURI(Doorlist.get(welcome));
-                videoView.setOnCompletionListener(circulPlay);
-                msec = 0;
-                videoindex = 0;
-                videoView.start();
-                AutoState = false;
-            }
-        });
+    private void setRemote() {
+        videoView.setVideoURI(Doorlist.get(welcome));
+        videoView.setOnCompletionListener(circulPlay);
+        msec = 0;
+        videoindex = 0;
+        videoView.start();
+        AutoState = false;
     }
 
     // 显示门的状态
@@ -265,45 +277,19 @@ public class MainActivity extends AppCompatActivity {
                 switch (DoorState) {
                     // opening
                     case 1:
-                        videoView.pause();
-                        if (AutoState) {
-                            if (videoView.getCurrentPosition() == videoView.getDuration())
-                                msec = 0;
-                            else
-                                msec = videoView.getCurrentPosition();
-                        }
-                        Log.d(TAG, "run: 暂停于 ： " + videoindex + "/" + msec);
-                        videoView.setVideoURI(Doorlist.get(opening));
-                        videoView.setOnCompletionListener(circulPlay);
-                        videoView.start();
+                        doingScene(opening);
                         break;
                     // opened
                     case 3:
-                        if (AutoState)
-                            setAuto();
-                        else
-                            setRemote();
+                        didScene();
                         break;
                     // closing
                     case 4:
-                        videoView.pause();
-                        if (AutoState) {
-                            if (videoView.getCurrentPosition() == videoView.getDuration())
-                                msec = 0;
-                            else
-                                msec = videoView.getCurrentPosition();
-                        }
-                        Log.d(TAG, "run: 暂停于 ： " + videoindex + "/" + msec);
-                        videoView.setVideoURI(Doorlist.get(closing));
-                        videoView.setOnCompletionListener(circulPlay);
-                        videoView.start();
+                        doingScene(closing);
                         break;
                     // closed
                     case 0:
-                        if (AutoState)
-                            setAuto();
-                        else
-                            setRemote();
+                        didScene();
                         break;
                     default:
                         break;
@@ -312,8 +298,32 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    class circulPlay implements MediaPlayer.OnCompletionListener {
+    private void didScene() {
+        if (AutoState) {
+            myTimer.startTimer();
+            setAuto();
+        } else {
+//            myTimer.cancelTimer();
+            setRemote();
+        }
+    }
 
+    private void doingScene(int flag) {
+        myTimer.pauseTimer();
+        videoView.pause();
+        if (AutoState) {
+            if (videoView.getCurrentPosition() == videoView.getDuration())
+                msec = 0;
+            else
+                msec = videoView.getCurrentPosition();
+        }
+        Log.d(TAG, "run: 暂停于 ： " + videoindex + "/" + msec);
+        videoView.setVideoURI(Doorlist.get(flag));
+        videoView.setOnCompletionListener(circulPlay);
+        videoView.start();
+    }
+
+    class circulPlay implements MediaPlayer.OnCompletionListener {
         @Override
         public void onCompletion(MediaPlayer mp) {
             Log.d(TAG, "onCompletion: " + "循环播放");
