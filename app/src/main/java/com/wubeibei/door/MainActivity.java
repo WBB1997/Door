@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Uri> DoorPlaylist;
     private List<Uri> Doorlist;
     private Map<Integer, byte[]> SendMap;
-    private final static boolean flag = true; // true 为左门
+    private final static boolean flag = false; // true 为左门
     private final static int closing = 0;
     private final static int opening = 1;
     private final static int welcome = 6;
@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private circulPlay circulPlay = new circulPlay();
     private sequencePlay sequencePlay;
 
-    private final static String HostIp = "192.168.43.1";
+    private final static String HostIp = "192.168.1.10";
     private final static int HostPort = 4001;
 
     private MyTimer myTimer;
@@ -254,8 +254,10 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "setAuto: 开始于 ： " + videoindex + "/" + msec);
         AutoState = true;
         if (flag) {
-            if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
+            if (SendMap.containsKey(videoindex % DoorPlaylist.size())) {
                 send(SendMap.get(videoindex % DoorPlaylist.size()));
+                send(new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+            }
         }
     }
 
@@ -339,8 +341,10 @@ public class MainActivity extends AppCompatActivity {
             videoView.setVideoURI(DoorPlaylist.get(videoindex % DoorPlaylist.size()));
             videoView.start();
             if(flag) {
-                if (SendMap.containsKey(videoindex % DoorPlaylist.size()))
+                if (SendMap.containsKey(videoindex % DoorPlaylist.size())) {
                     send(SendMap.get(videoindex % DoorPlaylist.size()));
+                    send(new byte[]{(byte) 0xAA, (byte) 0xBB, (byte) 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x37});
+                }
             }
         }
     }
